@@ -40,6 +40,30 @@
     for await (const [name, h] of handle.entries()) if (h.kind === 'file') map.set(name.toLowerCase(), h);
     return { get: async (name) => { const h = map.get(name.toLowerCase()); return h ? h.getFile() : null; } };
   }
+  function readAllEntries(reader) {
+    return new Promise((resolve, reject) => {
+      const all = [];
+      (function next() { reader.readEntries((es) => { if (!es.length) resolve(all); else { all.push(...es); next(); } }, reject); })();
+    });
+  }
+  // root: a FileSystemDirectoryEntry from a drag and drop. Looks in the folder itself, then in Music/Digital.
+  async function sourceFromDropEntry(root) {
+    const top = new Map();
+    for (const e of await readAllEntries(root.createReader())) top.set(e.name.toLowerCase(), e);
+    let music = null;
+    const m = top.get('music');
+    if (m && m.isDirectory) {
+      const d = (await readAllEntries(m.createReader())).find((e) => e.isDirectory && e.name.toLowerCase() === 'digital');
+      if (d) { music = new Map(); for (const e of await readAllEntries(d.createReader())) if (e.isFile) music.set(e.name.toLowerCase(), e); }
+    }
+    const file = (e) => new Promise((res, rej) => e.file(res, rej));
+    return { get: async (name) => {
+      const k = name.toLowerCase(), e = top.get(k);
+      if (e && e.isFile) return file(e);
+      const me = music && music.get(k);
+      return me ? file(me) : null;
+    } };
+  }
   function sourceFromFileList(files) {
     const map = new Map();
     for (const f of files) {
@@ -532,34 +556,16 @@
     try { const cachedTrack = await idbGet('music:' + name); if (cachedTrack) return cachedTrack; } catch (e) { /* not cached yet */ }
     why.length = 0;
     if (!musicSource) {
-      let handle = null;
-      try { handle = await idbGet('folder'); } catch (e) { why.push('could not read saved folder: ' + e.name); }
-      if (!handle) why.push('no folder was saved in this browser');
-      if (handle) {
-        try {
-          let p = await handle.queryPermission({ mode: 'read' });
-          if (p !== 'granted') { why.push('folder permission was "' + p + '"'); p = await handle.requestPermission({ mode: 'read' }); }
-          if (p === 'granted') { musicSource = await musicSourceFromDir(handle); if (!musicSource) why.push('saved folder has no Music/Digital inside'); }
-          else why.push('permission not granted');
-        } catch (e) { why.push('permission request failed: ' + (e && e.name)); }
-      }
-      if (!musicSource) {
-        if (typeof window.showDirectoryPicker === 'function') {
-          let h;
-          try { h = await window.showDirectoryPicker({ id: 'uo-folder', mode: 'read' }); } catch (e) { throw new Error('No folder chosen.'); }
-          try { await idbSet('folder', h); } catch (e) { /* optional */ }
-          musicSource = await musicSourceFromDir(h);
-        } else {
-          const files = await new Promise((resolve) => {
-            const inp = document.createElement('input');
-            inp.type = 'file'; inp.webkitdirectory = true; inp.multiple = true;
-            inp.onchange = () => resolve(inp.files);
-            inp.click();
-          });
-          if (files && files.length) musicSource = sourceFromFileList(files);
-        }
-        if (!musicSource) throw new Error('Could not find a Music/Digital folder there. Pick your Ultima Online folder.');
-      }
+      why.push('the music was not saved when the art was built');
+      const files = await new Promise((resolve) => {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.webkitdirectory = true; inp.multiple = true;
+        inp.onchange = () => resolve(Array.from(inp.files));
+        inp.addEventListener('cancel', () => resolve([]));
+        inp.click();
+      });
+      if (files.length) musicSource = sourceFromFileList(files);
+      if (!musicSource || !(await musicSource.get(name))) { musicSource = null; throw new Error('Could not find the music. Select your Ultima Online Classic folder.'); }
     }
     await precacheMusic(musicSource);                    // remember the menu tracks so this question is only asked once
     try { const stored = await idbGet('music:' + name); if (stored) return stored; } catch (e) { /* use the file directly */ }
@@ -568,11 +574,11 @@
     return f;
   }
 
-  window.UOLoader = { musicWhy: () => why.join('; '), getMusicFile, build, uopHash, saveCache, loadCache, install, sourceFromFileList, sourceFromDirHandle, REQUIRED };
+  window.UOLoader = { sourceFromDropEntry, musicWhy: () => why.join('; '), getMusicFile, build, uopHash, saveCache, loadCache, install, sourceFromFileList, sourceFromDirHandle, REQUIRED };
 
   function startApp() {
     const s = document.createElement('script');
-    s.src = 'app.js?v=6';
+    s.src = 'app.js?v=12';
     document.body.appendChild(s);
   }
 
@@ -588,11 +594,10 @@
     const overlay = document.getElementById('uo-setup');
     const status = document.getElementById('uo-status'), bar = document.getElementById('uo-bar'), err = document.getElementById('uo-error');
     const pick = document.getElementById('uo-pick'), fallback = document.getElementById('uo-folder-input'), again = document.getElementById('uo-change');
-    const hasPicker = typeof window.showDirectoryPicker === 'function';
     const canRun = typeof DecompressionStream === 'function' && typeof OffscreenCanvas === 'function';
     let started = false;
 
-    const show = () => { overlay.hidden = false; };
+    const show = () => { overlay.hidden = false; const g = document.getElementById('uo-gif'); if (g && !g.getAttribute('src')) g.src = g.dataset.src; };
     const hide = () => { overlay.hidden = true; };
     const fail = (m) => { err.textContent = m; err.hidden = false; status.textContent = ''; pick.disabled = false; };
     const progress = (pct, text) => { bar.style.width = pct + '%'; status.textContent = text; };
@@ -620,18 +625,8 @@
 
     if (!canRun) { show(); pick.disabled = true; fail('This browser is too old for the art loader. Please use a current Chrome, Edge or Firefox on a computer.'); return; }
 
-    pick.onclick = async () => {
-      if (hasPicker) {
-        try {
-          const handle = await window.showDirectoryPicker({ id: 'uo-folder', mode: 'read' });
-          status.textContent = 'Reading folder...';
-          await run(await sourceFromDirHandle(handle), handle);
-        } catch (e) { if (e && e.name !== 'AbortError') fail(String(e.message || e)); }
-      } else {
-        fallback.click();
-      }
-    };
-    fallback.onchange = () => { if (fallback.files.length) run(sourceFromFileList(fallback.files), null); };
+    pick.onclick = () => { fallback.click(); };
+    fallback.onchange = () => { const files = Array.from(fallback.files); fallback.value = ''; if (files.length) run(sourceFromFileList(files), null); };
     document.getElementById('uo-copy').onclick = async () => {
       const b = document.getElementById('uo-copy');
       try { await navigator.clipboard.writeText(document.getElementById('uo-path').textContent); b.textContent = 'Copied'; } catch (e) { b.textContent = 'Select and copy it'; }

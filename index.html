@@ -24,14 +24,14 @@
 </style>
 <script>try{var m=localStorage.getItem('britannia-theme');document.documentElement.dataset.theme=m||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){document.documentElement.dataset.theme='light'}</script>
 <style>
-#uo-setup{position:fixed;inset:0;z-index:100;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:16px}
+#uo-setup{position:fixed;inset:0;z-index:100;background:var(--paper);display:flex;padding:16px;overflow:auto}#uo-setup .card{margin:auto}
 #uo-setup[hidden]{display:none}
 #uo-setup .card{max-width:520px;width:100%;background:var(--white);border:1px solid var(--line);border-radius:6px;padding:26px 28px;box-shadow:0 6px 30px rgba(0,0,0,.12)}
 #uo-setup h1{font:24px var(--serif);margin:0 0 4px}
 #uo-setup .sub{color:var(--sub);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:16px}
 #uo-setup p{line-height:1.5;color:var(--text1);margin:0 0 12px}
 #uo-setup ul{margin:0 0 14px;padding-left:18px;color:var(--text2);line-height:1.5}
-#uo-find{margin:0 0 14px;padding:11px 12px;border:2px solid var(--gold);border-radius:4px;background:var(--soft)}#uo-find .find-title{font-size:15px;color:var(--text1);margin-bottom:8px}#uo-find .find-path{display:flex;gap:8px;align-items:center}#uo-find code{flex:1;min-width:0;padding:7px 8px;background:var(--field);border:1px solid var(--line);border-radius:3px;font:11px Consolas,monospace;color:var(--text1);overflow-wrap:anywhere}#uo-find .find-copy{height:30px;padding:0 12px;border:1px solid var(--line);background:var(--field);color:var(--text1);border-radius:3px}#uo-find .find-tip{margin-top:8px;color:var(--text2);font-size:11px;line-height:1.4}#uo-setup .go{height:38px;padding:0 20px;border:1px solid var(--green);background:var(--green);color:#fff;border-radius:3px;font-size:13px}
+#uo-find{margin:0 0 14px;padding:11px 12px;border:2px solid var(--gold);border-radius:4px;background:var(--soft)}#uo-find .find-title{font-size:15px;color:var(--text1);margin-bottom:8px}#uo-find .find-path{display:flex;gap:8px;align-items:center}#uo-find code{flex:1;min-width:0;padding:7px 8px;background:var(--field);border:1px solid var(--line);border-radius:3px;font:11px Consolas,monospace;color:var(--text1);overflow-wrap:anywhere}#uo-find .find-copy{height:30px;padding:0 12px;border:1px solid var(--line);background:var(--field);color:var(--text1);border-radius:3px}#uo-find .find-tip{margin-top:8px;color:var(--text2);font-size:11px;line-height:1.4}#uo-drop{margin:0 0 14px;padding:16px 14px;border:2px dashed var(--sub);border-radius:5px;text-align:center;background:var(--field)}#uo-drop.over{border-color:var(--gold);background:var(--soft)}#uo-drop .drop-big{font:17px var(--serif);color:var(--text1)}#uo-drop .drop-small{margin-top:6px;color:var(--text2);font-size:11px;line-height:1.4}#uo-alt{margin-top:10px;color:var(--text2);font-size:11px;line-height:1.5}#uo-alt .linkbtn{border:0;background:none;color:var(--green);text-decoration:underline;padding:0;font:inherit;cursor:pointer}#uo-gif{display:block;max-width:100%;height:auto;margin:0 0 14px;border:1px solid var(--line);border-radius:4px}#uo-setup .go{margin-bottom:16px;height:38px;padding:0 20px;border:1px solid var(--green);background:var(--green);color:#fff;border-radius:3px;font-size:13px}
 #uo-setup .go:disabled{opacity:.5;cursor:default}
 #uo-setup .track{height:8px;background:var(--line);border-radius:4px;margin-top:16px;overflow:hidden}
 #uo-setup .track[hidden]{display:none}
@@ -108,18 +108,21 @@
 <div id="uo-setup" hidden>
   <div class="card">
     <h1>UO Architect</h1>
-    <div class="sub">Isometric house planner</div>
+    <div class="sub">House &amp; Deco Planner</div>
     <div id="uo-intro">
       <div id="uo-find"><div class="find-title">Navigate to where <b>client.exe</b> is located</div>
-        <div class="find-path"><code id="uo-path">C:\Program Files (x86)\Electronic Arts\Ultima Online Classic\</code><button type="button" id="uo-copy" class="find-copy">Copy</button></div>
-        <div class="find-tip">That is the usual place. If yours is elsewhere, pick the folder that contains <b>client.exe</b>. In the window that opens, click the address bar, paste the path, press Enter, then click <b>Select Folder</b>.</div></div>
+        <div class="find-path"><code id="uo-path">C:\Program Files (x86)\Electronic Arts</code><button type="button" id="uo-copy" class="find-copy">Copy</button></div>
+        <div class="find-tip">Select the <b>Ultima Online Classic</b> folder (the one that contains <b>client.exe</b>).</div><div class="find-warn"><b>Chrome may say it is going to &ldquo;upload&rdquo; the files.</b> That is only its wording – nothing leaves your computer. Click <b>Upload</b>.</div></div>
+      
+      <img id="uo-gif" data-src="uoArchitectSetup.gif" alt="How to select your Ultima Online Classic folder" width="724" height="464">
+      <button class="go" id="uo-pick" type="button">Select my UO folder</button>
       <p>This page contains no Ultima Online artwork. To see the pieces, point it at your own UO folder (the one with <b>artLegacyMUL.uop</b> and <b>tiledata.mul</b> in it).</p>
       <ul>
-        <li>The art <b>and the game music</b> are built <b>on your computer</b>, in this browser. Nothing is uploaded.</li>
+        
         <li>It is remembered here, so you only do this once.</li>
         <li>Saved and exported designs hold only item numbers, never the art.</li>
       </ul>
-      <button class="go" id="uo-pick" type="button">Select my UO folder</button>
+      
     </div>
     <div class="track" hidden><div id="uo-bar"></div></div>
     <div id="uo-status"></div>
@@ -129,6 +132,6 @@
 <input type="file" id="uo-folder-input" webkitdirectory multiple hidden>
 <button id="uo-change" type="button" title="Choose a different UO folder or rebuild the art library">UO folder...</button>
 
-<script src="loader.js?v=6"></script>
+<script src="loader.js?v=12"></script>
 </body>
 </html>
