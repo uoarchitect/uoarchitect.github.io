@@ -572,7 +572,7 @@
 
   function startApp() {
     const s = document.createElement('script');
-    s.src = 'app.js';
+    s.src = 'app.js?v=5';
     document.body.appendChild(s);
   }
 
@@ -632,6 +632,11 @@
       }
     };
     fallback.onchange = () => { if (fallback.files.length) run(sourceFromFileList(fallback.files), null); };
+    document.getElementById('uo-copy').onclick = async () => {
+      const b = document.getElementById('uo-copy');
+      try { await navigator.clipboard.writeText(document.getElementById('uo-path').textContent); b.textContent = 'Copied'; } catch (e) { b.textContent = 'Select and copy it'; }
+      setTimeout(() => { b.textContent = 'Copy'; }, 2000);
+    };
     again.onclick = () => { show(); document.getElementById('uo-intro').hidden = false; };
 
     let cached = null;
