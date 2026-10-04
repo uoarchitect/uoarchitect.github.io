@@ -64,6 +64,15 @@
       return me ? file(me) : null;
     } };
   }
+  // Native app only: the exe maps the user's UO folder to a private address, so files are simply fetched.
+  function sourceFromFetch(base) {
+    return { get: async (name) => {
+      for (const p of [name, 'Music/Digital/' + name]) {
+        try { const r = await fetch(base + p); if (r.ok) return new File([await r.blob()], name); } catch (e) { /* try the next place */ }
+      }
+      return null;
+    } };
+  }
   function sourceFromFileList(files) {
     const map = new Map();
     for (const f of files) {
@@ -555,6 +564,10 @@
   async function getMusicFile(name) {
     try { const cachedTrack = await idbGet('music:' + name); if (cachedTrack) return cachedTrack; } catch (e) { /* not cached yet */ }
     why.length = 0;
+    if (!musicSource && window.UO_NATIVE && window.UO_NATIVE.base) {
+      const nf = await sourceFromFetch(window.UO_NATIVE.base).get(name);
+      if (nf) return nf;
+    }
     if (!musicSource) {
       why.push('the music was not saved when the art was built');
       const files = await new Promise((resolve) => {
@@ -574,11 +587,11 @@
     return f;
   }
 
-  window.UOLoader = { sourceFromDropEntry, musicWhy: () => why.join('; '), getMusicFile, build, uopHash, saveCache, loadCache, install, sourceFromFileList, sourceFromDirHandle, REQUIRED };
+  window.UOLoader = { sourceFromFetch, sourceFromDropEntry, musicWhy: () => why.join('; '), getMusicFile, build, uopHash, saveCache, loadCache, install, sourceFromFileList, sourceFromDirHandle, REQUIRED };
 
   function startApp() {
     const s = document.createElement('script');
-    s.src = 'app.js?v=13';
+    s.src = 'app.js?v=14';
     document.body.appendChild(s);
   }
 
@@ -596,6 +609,18 @@
     const pick = document.getElementById('uo-pick'), fallback = document.getElementById('uo-folder-input'), again = document.getElementById('uo-change');
     const canRun = typeof DecompressionStream === 'function' && typeof OffscreenCanvas === 'function';
     let started = false;
+    const NATIVE = window.UO_NATIVE || null;
+    const host = window.chrome && window.chrome.webview;
+    const askHostForFolder = () => { if (host) host.postMessage('choose-folder'); };
+    // In the native app the card only appears when the folder could not be found; it then offers the app's own folder window.
+    const nativeCard = (message) => {
+      for (const id of ['uo-find', 'uo-gif']) { const e = document.getElementById(id); if (e) e.hidden = true; }
+      pick.textContent = 'Choose my UO folder';
+      const skip = document.getElementById('uo-skip');
+      if (skip) { skip.hidden = false; skip.onclick = () => { hide(); if (!started) { started = true; startApp(); } }; }
+      if (message) { err.textContent = message; err.hidden = false; }
+      document.getElementById('uo-intro').hidden = false;
+    };
 
     const show = () => { overlay.hidden = false; const g = document.getElementById('uo-gif'); if (g && !g.getAttribute('src')) g.src = g.dataset.src; };
     const hide = () => { overlay.hidden = true; };
@@ -625,14 +650,14 @@
 
     if (!canRun) { show(); pick.disabled = true; fail('This browser is too old for the art loader. Please use a current Chrome, Edge or Firefox on a computer.'); return; }
 
-    pick.onclick = () => { fallback.click(); };
+    pick.onclick = () => { if (NATIVE) askHostForFolder(); else fallback.click(); };
     fallback.onchange = () => { const files = Array.from(fallback.files); fallback.value = ''; if (files.length) run(sourceFromFileList(files), null); };
     document.getElementById('uo-copy').onclick = async () => {
       const b = document.getElementById('uo-copy');
       try { await navigator.clipboard.writeText(document.getElementById('uo-path').textContent); b.textContent = 'Copied'; } catch (e) { b.textContent = 'Select and copy it'; }
       setTimeout(() => { b.textContent = 'Copy'; }, 2000);
     };
-    again.onclick = () => { show(); document.getElementById('uo-intro').hidden = false; };
+    again.onclick = () => { if (NATIVE) { askHostForFolder(); return; } show(); document.getElementById('uo-intro').hidden = false; };
 
     let cached = null;
     try { cached = await loadCache(); } catch (e) { console.warn('cache unreadable', e); }
@@ -641,6 +666,15 @@
       hide();
       started = true;
       startApp();
+    } else if (NATIVE && NATIVE.base) {
+      show();
+      document.getElementById('uo-intro').hidden = true;      // building straight from the folder the app found
+      bar.parentElement.hidden = false;
+      progress(0, 'Setting up from your Ultima Online folder (first time only)...');
+      run(sourceFromFetch(NATIVE.base), null).then(() => { if (!err.hidden) nativeCard(); });
+    } else if (NATIVE) {
+      show();
+      nativeCard('We could not find your Ultima Online folder automatically. Choose the folder that contains client.exe.');
     } else {
       show();
     }
