@@ -1,3 +1,47 @@
 [
-  {"name": "Custom Keep", "file": "custom_keep.json", "description": "A walled keep on a 23 × 24 foundation plus stairs, one floor, with grounds and decorations."}
+  {
+    "name": "Stone and Plaster House",
+    "file": "house_0x64.json",
+    "description": ""
+  },
+  {
+    "name": "Brick House",
+    "file": "house_0x74.json",
+    "description": ""
+  },
+  {
+    "name": "Tower",
+    "file": "house_0x7a.json",
+    "description": ""
+  },
+  {
+    "name": "Small Stone Tower",
+    "file": "house_0x98.json",
+    "description": ""
+  },
+  {
+    "name": "2 Story Villa",
+    "file": "house_0x9e.json",
+    "description": ""
+  },
+  {
+    "name": "Small Marble Workshop",
+    "file": "house_0xa2.json",
+    "description": ""
+  },
+  {
+    "name": "Stone Keep",
+    "file": "house_0x7c.json",
+    "description": ""
+  },
+  {
+    "name": "Castle",
+    "file": "house_0x7e.json",
+    "description": ""
+  },
+  {
+    "name": "Custom Keep",
+    "file": "custom_keep.json",
+    "description": ""
+  }
 ]
