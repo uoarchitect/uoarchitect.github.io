@@ -591,7 +591,7 @@
 
   function startApp() {
     const s = document.createElement('script');
-    s.src = 'app.js?v=14';
+    s.src = 'app.js?v=50';
     document.body.appendChild(s);
   }
 
@@ -657,7 +657,11 @@
       try { await navigator.clipboard.writeText(document.getElementById('uo-path').textContent); b.textContent = 'Copied'; } catch (e) { b.textContent = 'Select and copy it'; }
       setTimeout(() => { b.textContent = 'Copy'; }, 2000);
     };
-    again.onclick = () => { if (NATIVE) { askHostForFolder(); return; } show(); document.getElementById('uo-intro').hidden = false; };
+    const closeBtn = document.getElementById('uo-close');
+    const closeCard = () => { if (!started || pick.disabled) return; closeBtn.hidden = true; hide(); };
+    closeBtn.onclick = closeCard;
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden && !closeBtn.hidden) closeCard(); });
+    again.onclick = () => { if (NATIVE) { askHostForFolder(); return; } show(); document.getElementById('uo-intro').hidden = false; closeBtn.hidden = !started; };
 
     let cached = null;
     try { cached = await loadCache(); } catch (e) { console.warn('cache unreadable', e); }
