@@ -591,7 +591,7 @@
 
   function startApp() {
     const s = document.createElement('script');
-    s.src = 'app.js?v=50';
+    s.src = 'app.js?v=53';
     document.body.appendChild(s);
   }
 
